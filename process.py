@@ -46,3 +46,22 @@ def flatten_card(img, set_of_corners):
         img_outputs.append(imgOutput)
 
     return img_outputs
+
+def get_corner_snip(flattened_images):
+    c = 0
+    for img in flattened_images:
+        # img have shape (300, 200)
+        # crop the image in half first, and then the width in half again
+        crop = img[10:100, 0:30]
+
+        # threshold the corner
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        canny = cv2.Canny(blur, 80, 80)
+        kernel = np.ones((3, 3))
+        dial = cv2.dilate(canny, kernel=kernel, iterations=2)
+        result = cv2.erode(dial, kernel=kernel, iterations=1)
+
+        cv2.imwrite('Image' + str(c) + '.png', result)
+        c += 1
+
