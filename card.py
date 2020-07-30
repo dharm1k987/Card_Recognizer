@@ -29,7 +29,8 @@ while True:
     four_corners_set = process.findContours(thresh, imgResult, draw=True)
 
     flatten_card_set = process.flatten_card(imgResult2, four_corners_set)
-    process.get_corner_snip(flatten_card_set)
+    cropped_images = process.get_corner_snip(flatten_card_set)
+    process.split_rank_and_suit(cropped_images)
     cv2.imshow('Result', display.stackImages(0.85, [imgResult, thresh]))
 
     wait = cv2.waitKey(1)
