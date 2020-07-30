@@ -17,14 +17,17 @@ cap.set(4, frameHeight)
 # change brightness to 150
 cap.set(10, 150)
 
+flatten_card_set = []
+
 while True:
     success, img = cap.read()
     imgResult = img.copy()
 
     thresh = preprocess.preprocess_img(img)
 
-    process.findContours(thresh, imgResult, draw=True)
+    four_corners_set = process.findContours(thresh, imgResult, draw=True)
 
+    flatten_card_set = process.flatten_card(imgResult, four_corners_set)
     cv2.imshow('Result', display.stackImages(0.85, [imgResult, thresh]))
 
     wait = cv2.waitKey(1)
@@ -33,3 +36,9 @@ while True:
 
 cv2.destroyAllWindows()
 cap.release()
+
+print(flatten_card_set)
+print(four_corners_set[0])
+cv2.imwrite('Warped.png', flatten_card_set[0])
+
+cv2.waitKey(0)
