@@ -31,7 +31,8 @@ while True:
     flatten_card_set = process.flatten_card(imgResult2, four_corners_set)
     cropped_images = process.get_corner_snip(flatten_card_set)
     rank_suit_mapping = process.split_rank_and_suit(cropped_images)
-    process.eval_rank_suite(rank_suit_mapping)
+    pred = process.eval_rank_suite(rank_suit_mapping)
+    process.show_text(pred, four_corners_set, imgResult)
     cv2.imshow('Result', display.stackImages(0.85, [imgResult, thresh]))
 
     wait = cv2.waitKey(1)

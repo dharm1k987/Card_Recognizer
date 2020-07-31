@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import os
+from pathlib import Path
 
 def findContours(img, original, draw=False):
     contours, hier = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -41,15 +43,15 @@ def findContours(img, original, draw=False):
                 # now sortedX[1] and sortedX[2] are the right half
                 # the one with the larger y value goes first
                 finalOrder.extend(sorted(sortedX[2:4], key=lambda x: x[0][1], reverse=True))
-                print(approx)
-                print(finalOrder)
+                # print(approx)
+                # print(finalOrder)
 
                 four_corners_set.append(finalOrder)
                 for a in approx:
                     cv2.circle(original, (a[0][0], a[0][1]), 10, (255, 0, 0), 3)
                     # print((a[0][0], a[0][1]))
                 # print(approx)
-                print("___________")
+                # print("___________")
 
     return four_corners_set
 
@@ -111,7 +113,7 @@ def split_rank_and_suit(cropped_images):
         highest_two = dict()
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 500:
+            if area < 1000:
                 cv2.fillPoly(img, pts=[cnt], color=0)
                 continue
             perimeter = cv2.arcLength(cnt, closed=True)
@@ -131,27 +133,27 @@ def split_rank_and_suit(cropped_images):
             cv2.rectangle(img, (0, y), (img.shape[0], y+h), (255, 0, 0), 2)
             crop = img[y:y+h][:]
             # cv2.imwrite('{}-{}-crop.png'.format(imgC, cntC), crop)
-            cv2.imwrite('{}-{}-reg.png'.format(imgC, cntC), img)
+            # cv2.imwrite('{}-{}-reg.png'.format(imgC, cntC), img)
 
             cntC += 1
             mapping.append([crop, y])
 
         imgC += 1
 
-        # # # lets store rank and then suit
-        # mapping.sort(key=lambda x: x[1])
-        # # print(mapping)
-        # for m in mapping:
-        #     del m[1]
-        # # print(mapping)
+        # # lets store rank and then suit
+        mapping.sort(key=lambda x: x[1])
+        # print(mapping)
+        for m in mapping:
+            del m[1]
+        # print(mapping)
         # print("-------------")
-        #
-        # # [ mapping.pop(1) for m in mapping ]
-        # # # now we don't need the last item so we can remove
-        # if mapping:
-        #     rank_suit_mapping.append([mapping[0][0], mapping[1][0]])
-        #     cv2.imwrite('{}-0-split.png'.format(imgC), mapping[0][0])
-        #     cv2.imwrite('{}-1-split.png'.format(imgC), mapping[1][0])
+
+        # [ mapping.pop(1) for m in mapping ]
+        # # now we don't need the last item so we can remove
+        if mapping and len(mapping) == 2:
+            rank_suit_mapping.append([mapping[0][0], mapping[1][0]])
+            # cv2.imwrite('{}-0-split.png'.format(imgC), mapping[0][0])
+            # cv2.imwrite('{}-1-split.png'.format(imgC), mapping[1][0])
 
 
     return rank_suit_mapping
@@ -160,10 +162,69 @@ def eval_rank_suite(rank_suit_mapping):
     # 70x125
     # print(len(rank_suit_mapping))
     c = 0
-    return
+
+    pred = []
+
     for rank, suit in rank_suit_mapping:
-        # rank = cv2.resize(rank, (70, 125))
-        # suit = cv2.resize(suit, (70, 125))
+        rank = cv2.resize(rank, (70, 125))
+        suit = cv2.resize(suit, (70, 100))
         cv2.imwrite('{}-0.png'.format(c), rank)
         cv2.imwrite('{}-1.png'.format(c), suit)
         c += 1
+
+        # compare against images
+        minDiff = float('inf')
+        bestRank = ""
+        for f in os.listdir('Card_Imgs/Ranks'):
+            name = os.path.join('Card_Imgs/Ranks', f)
+            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+            diff = int(np.sum(cv2.absdiff(img, rank)/255))
+            if diff < minDiff:
+                minDiff = diff
+                bestRank = Path(name).stem
+
+        minDiff = float('inf')
+        bestSuit = ""
+        for f in os.listdir('Card_Imgs/Suits'):
+            name = os.path.join('Card_Imgs/Suits', f)
+            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+            diff = int(np.sum(cv2.absdiff(img, suit)/255))
+            if diff < minDiff:
+                minDiff = diff
+                bestSuit = Path(name).stem
+
+
+        pred.append('{} of {}'.format(bestRank, bestSuit))
+
+    return pred
+#
+# [[116, 168]]
+# [[102, 346]]
+# [[230, 349]]
+# [[237, 164]]
+def show_text(pred, four_corners_set, img):
+
+    for i in range(0, len(pred)):
+        corners = np.array(four_corners_set[i])
+        corners_flat = corners.reshape(-1, corners.shape[-1])
+        startX = corners_flat[0][0] + 10
+        halfY = (corners_flat[0][1] + corners_flat[1][1]) // 2
+        pred_list = pred[i].split(' ')
+
+        font = cv2.FONT_HERSHEY_COMPLEX
+
+        cv2.putText(img, pred_list[0], (startX, halfY), font,1,(0,0,0),3,cv2.LINE_AA)
+        cv2.putText(img, pred_list[0], (startX, halfY), font,1,(50,200,200),2,cv2.LINE_AA)
+
+        cv2.putText(img, pred_list[1], (startX, halfY+30), font,1,(0,0,0),3,cv2.LINE_AA)
+        cv2.putText(img, pred_list[1], (startX, halfY+30), font,1,(50,200,200),2,cv2.LINE_AA)
+
+        cv2.putText(img, pred_list[2], (startX, halfY+60), font,1,(0,0,0),3,cv2.LINE_AA)
+        cv2.putText(img, pred_list[2], (startX, halfY+60), font,1,(50,200,200),2,cv2.LINE_AA)
+
+        # for c in four_corners_set[i]:
+        #     corner = c[0]
+        #     print(c, sep="")
+        # print(minX)
+        print('-------')
+
