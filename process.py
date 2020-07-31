@@ -88,7 +88,7 @@ def get_corner_snip(flattened_images):
         gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
         canny = cv2.Canny(blur, 50, 50)
-        kernel = np.ones((4, 4))
+        kernel = np.ones((3, 3))
         result = cv2.dilate(canny, kernel=kernel, iterations=3)
         # result = cv2.erode(dial, kernel=kernel, iterations=1)
 
