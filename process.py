@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import os
 from pathlib import Path
+from opencv_card_recognizer import augtest
+from opencv_card_recognizer import augment
 
 def findContours(img, original, draw=False):
     contours, hier = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -73,38 +75,56 @@ def flatten_card(img, set_of_corners):
 
     return img_outputs
 
+# def empty(x):
+#     pass
+#
+# cv2.namedWindow("Parameters2")
+# cv2.resizeWindow("Parameters2",640,240)
+# cv2.createTrackbar("Threshold1","Parameters2",40,255,empty)
+# cv2.createTrackbar("Threshold2","Parameters2",24,255,empty)
+# originally 51 72
+# then 35 60
+
 def get_corner_snip(flattened_images):
     c = 0
     cropped_images = []
     for img in flattened_images:
         # img have shape (300, 200)
         # crop the image in half first, and then the width in half again
-        crop = img[10:100, 0:30]
+        crop = img[10:120, 0:30]
 
         # resize by a factor of 4
-        crop = cv2.resize(crop, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
+        crop = cv2.resize(crop, None, fx=4, fy=4)
 
         # threshold the corner
         gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        canny = cv2.Canny(blur, 50, 50)
-        kernel = np.ones((4, 4))
-        result = cv2.dilate(canny, kernel=kernel, iterations=3)
+        # blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters2")
+        # threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters2")
+
+        canny = cv2.Canny(gray, 40, 24)
+        kernel = np.ones((3, 3))
+        result = cv2.dilate(canny, kernel=kernel, iterations=2)
+
+        # result = gray
+
+
         # result = cv2.erode(dial, kernel=kernel, iterations=1)
 
-
+        # cv2.imshow('Image' + str(c) + '-before-warp.png', result)
         cv2.imwrite('Image' + str(c) + '-before-warp.png', img)
         cv2.imwrite('Image' + str(c) + '.png', result)
         c += 1
 
-        cropped_images.append(result)
+        cropped_images.append([result, gray])
 
     return cropped_images
 
 def split_rank_and_suit(cropped_images):
     imgC = 0
     rank_suit_mapping = []
-    for img in cropped_images:
+    for img, original in cropped_images:
         # print(img.shape)
 
         # find the two largest contours
@@ -113,7 +133,7 @@ def split_rank_and_suit(cropped_images):
         highest_two = dict()
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 1000:
+            if area < 1300:
                 cv2.fillPoly(img, pts=[cnt], color=0)
                 continue
             perimeter = cv2.arcLength(cnt, closed=True)
@@ -130,13 +150,14 @@ def split_rank_and_suit(cropped_images):
             perimeter = highest_two[area][1]
             approx = cv2.approxPolyDP(cnt, 0.02*perimeter, closed=True)
             x, y, w, h = cv2.boundingRect(approx)
-            cv2.rectangle(img, (0, y), (img.shape[0], y+h), (255, 0, 0), 2)
-            crop = img[y:y+h][:]
+            # cv2.rectangle(img, (0, y), (img.shape[0], y+h), (255, 0, 0), 2)
+            crop = original[y:y+h][:]
+            sharpened = augment.contrast(crop, 100)
             # cv2.imwrite('{}-{}-crop.png'.format(imgC, cntC), crop)
             # cv2.imwrite('{}-{}-reg.png'.format(imgC, cntC), img)
 
             cntC += 1
-            mapping.append([crop, y])
+            mapping.append([sharpened, y])
 
         imgC += 1
 
@@ -152,6 +173,7 @@ def split_rank_and_suit(cropped_images):
         # # now we don't need the last item so we can remove
         if mapping and len(mapping) == 2:
             rank_suit_mapping.append([mapping[0][0], mapping[1][0]])
+            # print("added")
             # cv2.imwrite('{}-0-split.png'.format(imgC), mapping[0][0])
             # cv2.imwrite('{}-1-split.png'.format(imgC), mapping[1][0])
 
@@ -159,6 +181,7 @@ def split_rank_and_suit(cropped_images):
     return rank_suit_mapping
 
 def eval_rank_suite(rank_suit_mapping):
+
     # 70x125
     # print(len(rank_suit_mapping))
     c = 0
@@ -166,32 +189,44 @@ def eval_rank_suite(rank_suit_mapping):
     pred = []
 
     for rank, suit in rank_suit_mapping:
-        rank = cv2.resize(rank, (70, 125))
-        suit = cv2.resize(suit, (70, 100))
+        rank = cv2.resize(rank, (100, 120))
+        suit = cv2.resize(suit, (100, 120))
         cv2.imwrite('{}-0.png'.format(c), rank)
         cv2.imwrite('{}-1.png'.format(c), suit)
         c += 1
 
-        # compare against images
-        minDiff = float('inf')
-        bestRank = ""
-        for f in os.listdir('Card_Imgs/Ranks'):
-            name = os.path.join('Card_Imgs/Ranks', f)
-            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
-            diff = int(np.sum(cv2.absdiff(img, rank)/255))
-            if diff < minDiff:
-                minDiff = diff
-                bestRank = Path(name).stem
+        # # compare against images
+        # minDiff = float('inf')
+        # bestRank = ""
+        # for f in os.listdir('Card_Imgs/Ranks'):
+        #     name = os.path.join('Card_Imgs/Ranks', f)
+        #     img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+        #     diff = int(np.sum(cv2.absdiff(img, rank)/255))
+        #     if diff < minDiff:
+        #         minDiff = diff
+        #         bestRank = Path(name).stem
+        #
+        # minDiff = float('inf')
+        # bestSuit = ""
+        # for f in os.listdir('Card_Imgs/Suits'):
+        #     name = os.path.join('Card_Imgs/Suits', f)
+        #     img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+        #     diff = int(np.sum(cv2.absdiff(img, suit)/255))
+        #     if diff < minDiff:
+        #         minDiff = diff
+        #         bestSuit = Path(name).stem
 
-        minDiff = float('inf')
-        bestSuit = ""
-        for f in os.listdir('Card_Imgs/Suits'):
-            name = os.path.join('Card_Imgs/Suits', f)
-            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
-            diff = int(np.sum(cv2.absdiff(img, suit)/255))
-            if diff < minDiff:
-                minDiff = diff
-                bestSuit = Path(name).stem
+        myModel = augtest.model_wrapper('imgs/ranks', 13, 'rankWeights.h5')
+        cv2.imshow('rank', rank)
+
+        rank = rank.reshape(rank.shape[0], rank.shape[1], 1)
+        rank = np.expand_dims(rank, axis=0)
+        # print('Shape is {}'.format(rank.shape))
+        pred1 = myModel.predict(  np.vstack([rank])    )[0]
+        # print('Prediction is {}'.format(pred1))
+        bestRank = np.argmax(pred1, axis=0)
+        bestSuit = "TESTING"
+
 
 
         pred.append('{} of {}'.format(bestRank, bestSuit))
@@ -226,5 +261,5 @@ def show_text(pred, four_corners_set, img):
         #     corner = c[0]
         #     print(c, sep="")
         # print(minX)
-        print('-------')
+        # print('-------')
 
