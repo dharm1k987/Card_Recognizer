@@ -1,9 +1,8 @@
 import cv2
-import numpy as np
-
 from opencv_card_recognizer import preprocess
 from opencv_card_recognizer import display
 from opencv_card_recognizer import process
+from opencv_card_recognizer import augtest
 
 frameWidth = 640
 frameHeight = 480
@@ -19,6 +18,8 @@ cap.set(10, 150)
 
 flatten_card_set = []
 
+modelRanks, modelSuits = augtest.model_wrapper('imgs/ranks', 13, 'rankWeights.h5'), augtest.model_wrapper('imgs/suits', 4, 'suitWeights.h5'),
+
 while True:
     success, img = cap.read()
     imgResult = img.copy()
@@ -31,7 +32,7 @@ while True:
     flatten_card_set = process.flatten_card(imgResult2, four_corners_set)
     cropped_images = process.get_corner_snip(flatten_card_set)
     rank_suit_mapping = process.split_rank_and_suit(cropped_images)
-    pred = process.eval_rank_suite(rank_suit_mapping)
+    pred = process.eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits)
     process.show_text(pred, four_corners_set, imgResult)
     cv2.imshow('Result', display.stackImages(0.85, [imgResult, thresh]))
 
@@ -41,10 +42,3 @@ while True:
 
 cv2.destroyAllWindows()
 cap.release()
-
-# print(flatten_card_set)
-# print(four_corners_set[0])
-# cv2.imwrite('Warped.png', flatten_card_set[0])
-# cv2.imwrite('Warped2.png', flatten_card_set[1])
-
-# cv2.waitKey(0)

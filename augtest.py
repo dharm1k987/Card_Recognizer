@@ -5,7 +5,20 @@ from tensorflow.keras.callbacks import Callback
 import numpy as np
 from opencv_card_recognizer import model
 
-def model_wrapper(dataPath, classes, wtsPath=None):     # 'imgs/ranks'
+def model_predict(rankOrSuitModel, data, type):
+    data = data.reshape(data.shape[0], data.shape[1], 1)
+    data = np.expand_dims(data, axis=0)
+    pred = rankOrSuitModel.predict(  np.vstack([data])    )[0]
+
+    d = []
+    if type == 'suits':
+        d.extend(['Hearts', 'Spades', 'Clubs', 'Diamonds'])
+    else:
+        d.extend(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'])
+
+    return d[np.argmax(pred, axis=0)]
+
+def model_wrapper(dataPath, classes, wtsPath=None, train=False):     # 'imgs/ranks'
 
     X_train, X_test, y_train, y_test = model.loadData(dataPath)
 
@@ -30,22 +43,20 @@ def model_wrapper(dataPath, classes, wtsPath=None):     # 'imgs/ranks'
     y_train = to_categorical(y_train,classes)
     y_test = to_categorical(y_test,classes)
 
-    # print(len(X_train))
-
     if wtsPath:
-        myModel.load_weights('rankWeights.h5')
-    else:
+        myModel.load_weights(wtsPath)
 
+    if train:
         class myCallback(Callback):
             def on_epoch_end(self, epoch, logs={}):
-                if logs.get('accuracy') > 0.9 and logs.get('val_accuracy') > 0.9:
+                if logs.get('accuracy') > 0.90 and logs.get('val_accuracy') > 0.90:
                     print('Stopping training')
                     myModel.stop_training = True
 
         history = myModel.fit_generator(dataGen.flow(X_train,y_train,
-                        batch_size=16),
-                        steps_per_epoch=len(X_train)//16,
-                        epochs=1000,
+                        batch_size=8),
+                        steps_per_epoch=len(X_train)//8,
+                        epochs=2000,
                         validation_data=(X_test,y_test),
                         shuffle=1,
                         callbacks=[myCallback()])
@@ -69,13 +80,4 @@ def model_wrapper(dataPath, classes, wtsPath=None):     # 'imgs/ranks'
 
     return myModel
 
-# myModel = model_wrapper('imgs/ranks',13,'rankWeights.h5')
-#
-# img = cv2.imread('imgs/ranks/5.jpg')
-# img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-# img = img.reshape(img.shape[0], img.shape[1], 1)
-# img = np.expand_dims(img, axis=0)
-# print(img.shape)
-# pred = myModel.predict(  np.vstack([img])    )[0]
-# print(pred)
-# print(np.argmax(pred, axis=0))
+# myModel = model_wrapper('imgs/ranks',13, 'rankWeights.h5', train=True)

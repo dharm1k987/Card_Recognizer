@@ -1,21 +1,26 @@
 import cv2
 import numpy as np
+from opencv_card_recognizer import augtest
 
-img = cv2.imread('Image0.png')
+modelRanks, modelSuits = augtest.model_wrapper('imgs/ranks', 13, 'rankWeights.h5'), augtest.model_wrapper('imgs/suits', 4, 'suitWeights.h5'),
+
+
+img = cv2.imread('imgs/ranks/3-4.png')
 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY);
+print(img.shape)
 
+# img = img[:,0:75]
+# cv2.imshow('img', img)
 
-contours, hier = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-highest_two = dict()
-for cnt in contours:
-    area = cv2.contourArea(cnt)
-    perimeter = cv2.arcLength(cnt, closed=True)
-    approx = cv2.approxPolyDP(cnt, 0.02*perimeter, closed=True)
-    x, y, w, h = cv2.boundingRect(approx)
-    cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 2)
+img = cv2.resize(img, (100, 120))
 
 cv2.imshow('img', img)
 
+img2 = cv2.imread('0-1.png')
+img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY);
+img2 = cv2.resize(img2, (100, 120))
+
+print(augtest.model_predict(modelRanks, img, 'ranks'))
+print(augtest.model_predict(modelSuits, img2, 'suits'))
 
 cv2.waitKey(0)

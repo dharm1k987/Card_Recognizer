@@ -11,6 +11,7 @@ def loadData(pathOfDir):
     for filename in os.listdir(pathOfDir):
         f = os.path.join(pathOfDir, filename)
         file_alone = filename.split('.')[0]
+        file_alone = file_alone.split('-')[0]
 
         img = cv2.imread(f)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -21,7 +22,7 @@ def loadData(pathOfDir):
             augment.brightness_img(img, -20),
             augment.noise_img(img),
             augment.zoom_img(img, 1.2),
-            augment.horizontal_flip(img),
+            # augment.horizontal_flip(img),
             augment.blur_image(img),
             augment.rotation(img, 10),
             augment.rotation(img, -10),
@@ -31,11 +32,6 @@ def loadData(pathOfDir):
         c = 0
 
         for i in list_of_imgs:
-            # print(i.shape)
-
-            # print(i.shape)
-            # print('---------')
-
             images.append(i)
 
             if file_alone == 'A':
@@ -46,13 +42,13 @@ def loadData(pathOfDir):
                 classes.append(11)
             elif file_alone == 'K':
                 classes.append(12)
-            elif file_alone == 'Hearts':
+            elif file_alone.startswith('Hearts'):
                 classes.append(0)
-            elif file_alone == 'Spades':
+            elif file_alone.startswith('Spades'):
                 classes.append(1)
-            elif file_alone == 'Clubs':
+            elif file_alone.startswith('Clubs'):
                 classes.append(2)
-            elif file_alone == 'Diamonds':
+            elif file_alone.startswith('Diamonds'):
                 classes.append(3)
             else:
                 classes.append(int(file_alone) - 1)
@@ -60,16 +56,12 @@ def loadData(pathOfDir):
             # cv2.imwrite('{}-{}.png'.format(file_alone, c), i)
             c += 1
 
-    # print('X: {}, y: {}'.format(len(images), len(classes)))
-
     X = np.array(images)
     y = np.array(classes)
 
     X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2, shuffle=True)
 
     return X_train, X_test, y_train, y_test
-
-
 
 
 def getModel(img, classes):

@@ -13,6 +13,8 @@ def findContours(img, original, draw=False):
         area = cv2.contourArea(cnt)
         perimeter = cv2.arcLength(cnt, closed=True)
 
+        maxArea = 0
+
         if area > 2000:
             approx = cv2.approxPolyDP(cnt, 0.01*perimeter, closed=True)
 
@@ -31,8 +33,6 @@ def findContours(img, original, draw=False):
                 l3 = np.array(approx[2]).tolist()
                 l4 = np.array(approx[3]).tolist()
 
-                # print([l1,l2,l3,l4])
-
                 # find which ones have similar x values
                 similarX = []
                 sortedX = sorted([l1,l2,l3,l4], key=lambda x: x[0][0])
@@ -48,11 +48,14 @@ def findContours(img, original, draw=False):
                 # print(approx)
                 # print(finalOrder)
 
+                if area > maxArea:
+                    maxArea = area
+                    four_corners_set = []
+
                 four_corners_set.append(finalOrder)
                 for a in approx:
                     cv2.circle(original, (a[0][0], a[0][1]), 10, (255, 0, 0), 3)
                     # print((a[0][0], a[0][1]))
-                # print(approx)
                 # print("___________")
 
     return four_corners_set
@@ -91,7 +94,7 @@ def get_corner_snip(flattened_images):
     for img in flattened_images:
         # img have shape (300, 200)
         # crop the image in half first, and then the width in half again
-        crop = img[10:120, 0:30]
+        crop = img[10:120, 5:35]
 
         # resize by a factor of 4
         crop = cv2.resize(crop, None, fx=4, fy=4)
@@ -108,7 +111,6 @@ def get_corner_snip(flattened_images):
         result = cv2.dilate(canny, kernel=kernel, iterations=2)
 
         # result = gray
-
 
         # result = cv2.erode(dial, kernel=kernel, iterations=1)
 
@@ -133,7 +135,7 @@ def split_rank_and_suit(cropped_images):
         highest_two = dict()
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 1300:
+            if area < 1500:
                 cv2.fillPoly(img, pts=[cnt], color=0)
                 continue
             perimeter = cv2.arcLength(cnt, closed=True)
@@ -153,8 +155,11 @@ def split_rank_and_suit(cropped_images):
             # cv2.rectangle(img, (0, y), (img.shape[0], y+h), (255, 0, 0), 2)
             crop = original[y:y+h][:]
             sharpened = augment.contrast(crop, 100)
+            sharpened[sharpened < 100] = 0
+            sharpened[sharpened > 150] = 255
+
             # cv2.imwrite('{}-{}-crop.png'.format(imgC, cntC), crop)
-            # cv2.imwrite('{}-{}-reg.png'.format(imgC, cntC), img)
+            # cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
 
             cntC += 1
             mapping.append([sharpened, y])
@@ -180,7 +185,8 @@ def split_rank_and_suit(cropped_images):
 
     return rank_suit_mapping
 
-def eval_rank_suite(rank_suit_mapping):
+
+def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
 
     # 70x125
     # print(len(rank_suit_mapping))
@@ -195,37 +201,38 @@ def eval_rank_suite(rank_suit_mapping):
         cv2.imwrite('{}-1.png'.format(c), suit)
         c += 1
 
-        # # compare against images
-        # minDiff = float('inf')
-        # bestRank = ""
-        # for f in os.listdir('Card_Imgs/Ranks'):
-        #     name = os.path.join('Card_Imgs/Ranks', f)
-        #     img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
-        #     diff = int(np.sum(cv2.absdiff(img, rank)/255))
-        #     if diff < minDiff:
-        #         minDiff = diff
-        #         bestRank = Path(name).stem
-        #
-        # minDiff = float('inf')
-        # bestSuit = ""
-        # for f in os.listdir('Card_Imgs/Suits'):
-        #     name = os.path.join('Card_Imgs/Suits', f)
-        #     img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
-        #     diff = int(np.sum(cv2.absdiff(img, suit)/255))
-        #     if diff < minDiff:
-        #         minDiff = diff
-        #         bestSuit = Path(name).stem
+        # compare against images
+        rankDict = dict()
+        for f in os.listdir('imgs/ranks'):
+            name = os.path.join('imgs/ranks', f)
+            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+            diff = int(np.sum(cv2.absdiff(img, rank)/255))
+            # norm = cv2.norm(img, rank)
+            # diff = norm * norm / 255
+            rankName = Path(name).stem.split('-')[0]
+            if rankName in rankDict:
+                rankDict[rankName] += diff
+            else:
+                rankDict[rankName] = diff
 
-        myModel = augtest.model_wrapper('imgs/ranks', 13, 'rankWeights.h5')
-        cv2.imshow('rank', rank)
+            # if diff < minDiff:
+            #     minDiff = diff
+            #     bestRank = Path(name).stem
 
-        rank = rank.reshape(rank.shape[0], rank.shape[1], 1)
-        rank = np.expand_dims(rank, axis=0)
-        # print('Shape is {}'.format(rank.shape))
-        pred1 = myModel.predict(  np.vstack([rank])    )[0]
-        # print('Prediction is {}'.format(pred1))
-        bestRank = np.argmax(pred1, axis=0)
-        bestSuit = "TESTING"
+        suitDict = dict()
+        for f in os.listdir('imgs/suits'):
+            name = os.path.join('imgs/suits', f)
+            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+            diff = int(np.sum(cv2.absdiff(img, suit)/255))
+            suitName = Path(name).stem.split('-')[0]
+            if suitName in suitDict:
+                suitDict[suitName] += diff
+            else:
+                suitDict[suitName] = diff
+
+
+        bestSuit = augtest.model_predict(modelSuits, suit, 'suits')#min(suitDict, key=suitDict.get)
+        bestRank = augtest.model_predict(modelRanks, rank, 'ranks')#min(rankDict, key=rankDict.get)
 
 
 
@@ -256,10 +263,4 @@ def show_text(pred, four_corners_set, img):
 
         cv2.putText(img, pred_list[2], (startX, halfY+60), font,1,(0,0,0),3,cv2.LINE_AA)
         cv2.putText(img, pred_list[2], (startX, halfY+60), font,1,(50,200,200),2,cv2.LINE_AA)
-
-        # for c in four_corners_set[i]:
-        #     corner = c[0]
-        #     print(c, sep="")
-        # print(minX)
-        # print('-------')
 
