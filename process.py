@@ -156,7 +156,7 @@ def split_rank_and_suit(cropped_images):
             crop = original[y:y+h][:]
             sharpened = augment.contrast(crop, 100)
             sharpened[sharpened < 100] = 0
-            sharpened[sharpened > 150] = 255
+            sharpened[sharpened > 125] = 255
 
             # cv2.imwrite('{}-{}-crop.png'.format(imgC, cntC), crop)
             # cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
