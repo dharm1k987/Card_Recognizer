@@ -10,13 +10,13 @@ def model_predict(rankOrSuitModel, data, type):
     data = np.expand_dims(data, axis=0)
     pred = rankOrSuitModel.predict(  np.vstack([data])    )[0]
 
-    d = []
-    if type == 'suits':
-        d.extend(['Hearts', 'Spades', 'Clubs', 'Diamonds'])
-    else:
-        d.extend(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'])
+    # d = []
+    # if type == 'suits':
+    #     d.extend(['Hearts', 'Spades', 'Clubs', 'Diamonds'])
+    # else:
+    #     d.extend(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'])
 
-    return d[np.argmax(pred, axis=0)]
+    return pred#d[np.argmax(pred, axis=0)]
 
 def model_wrapper(dataPath, classes, wtsPath=None, train=False, toSaveAs=None):     # 'imgs/ranks'
 
@@ -83,4 +83,5 @@ def model_wrapper(dataPath, classes, wtsPath=None, train=False, toSaveAs=None): 
 
     return myModel
 
-# myModel = model_wrapper('imgs/suits2',4, 'suits2Weights.h5', train=True, toSaveAs='suits2Weights.h5')
+myModel = model_wrapper('imgs/ranks2',13, None, train=True, toSaveAs='suitsOvernightWeights.h5')
+myModel2 = model_wrapper('imgs/suits2',4, None, train=True, toSaveAs='suitsOvernightWeights.h5')

@@ -59,7 +59,7 @@ def loadData(pathOfDir):
     X = np.array(images)
     y = np.array(classes)
 
-    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.4, shuffle=True)
 
     return X_train, X_test, y_train, y_test
 

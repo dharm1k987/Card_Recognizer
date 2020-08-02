@@ -9,7 +9,10 @@ def findContours(img, original, draw=False):
     contours, hier = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     four_corners_set = []
 
-    for cnt in contours:
+    proper = sorted(contours, key = cv2.contourArea, reverse = True)
+
+
+    for cnt in proper:
         area = cv2.contourArea(cnt)
         perimeter = cv2.arcLength(cnt, closed=True)
 
@@ -57,6 +60,10 @@ def findContours(img, original, draw=False):
                     cv2.circle(original, (a[0][0], a[0][1]), 10, (255, 0, 0), 3)
                     # print((a[0][0], a[0][1]))
                 # print("___________")
+
+                # return four_corners_set
+
+
 
     return four_corners_set
 
@@ -121,8 +128,8 @@ def get_corner_snip(flattened_images):
         # result = cv2.erode(dial, kernel=kernel, iterations=1)
 
         # cv2.imshow('Image' + str(c) + '-before-warp.png', result)
-        cv2.imwrite('Image' + str(c) + '-before-warp.png', img)
-        cv2.imwrite('Image' + str(c) + '.png', result)
+        # cv2.imwrite('Image' + str(c) + '-before-warp.png', img)
+        # cv2.imwrite('Image' + str(c) + '.png', result)
         c += 1
 
         cropped_images.append([result, gray])
@@ -160,10 +167,10 @@ def split_rank_and_suit(cropped_images):
             x, y, w, h = cv2.boundingRect(approx)
             # cv2.rectangle(img, (0, y), (img.shape[0], y+h), (255, 0, 0), 2)
             crop = original[y:y+h][:]
-            cv2.imwrite('{}-{}-before.png'.format(imgC, cntC), crop)
+            # cv2.imwrite('{}-{}-before.png'.format(imgC, cntC), crop)
 
             sharpened = augment.contrast(crop, 30)
-            cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
+            # cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
 
             # sharpened[sharpened < 175] -= 150
             # sharpened[sharpened < 0] = 0
@@ -177,7 +184,7 @@ def split_rank_and_suit(cropped_images):
 
 
 
-            cv2.imwrite('{}-{}-sharp-after-filter.png'.format(imgC, cntC), sharpened)
+            # cv2.imwrite('{}-{}-sharp-after-filter.png'.format(imgC, cntC), sharpened)
 
             # cv2.imwrite('{}-{}-crop.png'.format(imgC, cntC), crop)
             # cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
@@ -217,8 +224,8 @@ def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
     for rank, suit in rank_suit_mapping:
         rank = cv2.resize(rank, (100, 120))
         suit = cv2.resize(suit, (100, 120))
-        # cv2.imwrite('{}-0.png'.format(c), rank)
-        # cv2.imwrite('{}-1.png'.format(c), suit)
+        cv2.imwrite('{}-0.png'.format(c), rank)
+        cv2.imwrite('{}-1.png'.format(c), suit)
         c += 1
 
         # compare against images
@@ -259,12 +266,30 @@ def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
         #         bestSuit = Path(name).stem
 
 
-        bestSuit = augtest.model_predict(modelSuits, suit, 'suits')#min(suitDict, key=suitDict.get)
-        bestRank = augtest.model_predict(modelRanks, rank, 'ranks')#min(rankDict, key=rankDict.get)
+
+        bestSuitPredictions = augtest.model_predict(modelSuits, suit, 'suits')#min(suitDict, key=suitDict.get)
+        bestRankPredictions = augtest.model_predict(modelRanks, rank, 'ranks')#min(rankDict, key=rankDict.get)
+
+        bestSuitIndex = np.argsort(bestSuitPredictions, axis=0)
+        bestRankIndex = np.argsort(bestRankPredictions, axis=0)
+
+        rankNames = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+        suitNames = ['Hearts', 'Spades', 'Clubs', 'Diamonds']
+
+        bestSuitName, bestSuitPer = suitNames[bestSuitIndex[-1]], bestSuitPredictions[bestSuitIndex[-1]]
+        bestRankName, bestRankPer = rankNames[bestRankIndex[-1]], bestRankPredictions[bestRankIndex[-1]]
+
+        sbestSuitName, sbestSuitPer = suitNames[bestSuitIndex[-2]], bestSuitPredictions[bestSuitIndex[-2]]
+        sbestRankName, sbestRankPer = rankNames[bestRankIndex[-2]], bestRankPredictions[bestRankIndex[-2]]
+
+        totalPer = bestRankPer + sbestRankPer + bestSuitPer + sbestSuitPer
+
+        guess1 = '{}/{}/{}%'.format(bestRankName, bestSuitName, round(((bestSuitPer+bestRankPer)/totalPer)*100))
+        guess2 = '{}/{}/{}%'.format(sbestRankName, sbestSuitName, round(((sbestSuitPer+sbestRankPer)/totalPer)*100))
 
 
 
-        pred.append('{} of {}'.format(bestRank, bestSuit))
+        pred.append('{}\n{}'.format(guess1, guess2))
         c+=1
 
     return pred
@@ -278,18 +303,13 @@ def show_text(pred, four_corners_set, img):
     for i in range(0, len(pred)):
         corners = np.array(four_corners_set[i])
         corners_flat = corners.reshape(-1, corners.shape[-1])
-        startX = corners_flat[0][0] + 10
+        startX = corners_flat[0][0] + 0
         halfY = (corners_flat[0][1] + corners_flat[1][1]) // 2
-        pred_list = pred[i].split(' ')
+        pred_list = pred[i].split('\n')
 
         font = cv2.FONT_HERSHEY_COMPLEX
-
-        cv2.putText(img, pred_list[0], (startX, halfY), font,1,(0,0,0),3,cv2.LINE_AA)
-        cv2.putText(img, pred_list[0], (startX, halfY), font,1,(50,200,200),2,cv2.LINE_AA)
-
-        cv2.putText(img, pred_list[1], (startX, halfY+30), font,1,(0,0,0),3,cv2.LINE_AA)
-        cv2.putText(img, pred_list[1], (startX, halfY+30), font,1,(50,200,200),2,cv2.LINE_AA)
-
-        cv2.putText(img, pred_list[2], (startX, halfY+60), font,1,(0,0,0),3,cv2.LINE_AA)
-        cv2.putText(img, pred_list[2], (startX, halfY+60), font,1,(50,200,200),2,cv2.LINE_AA)
-
+        gap = 0
+        for j in pred_list:
+            cv2.putText(img, j, (startX, halfY+gap), font,0.8,(0,0,0),3,cv2.LINE_AA)
+            cv2.putText(img, j, (startX, halfY+gap), font,0.8,(50,200,200),2,cv2.LINE_AA)
+            gap += 30
