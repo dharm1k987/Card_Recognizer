@@ -55,8 +55,8 @@ for f in os.listdir('imgs/ranks3'):
 
 
 
-# if sharpened[i,j] > 150:
-            #     sharpened[i,j] = 255#min(255, sharpened[i,j] + 40)
+    # if sharpened[i,j] > 150:
+    #     sharpened[i,j] = 255#min(255, sharpened[i,j] + 40)
 
 
     name = Path(filename).stem
@@ -72,4 +72,3 @@ for f in os.listdir('imgs/ranks3'):
     # cv2.waitKey(0)
 
     # break
-

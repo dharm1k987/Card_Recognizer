@@ -82,6 +82,6 @@ def model_wrapper(dataPath, classes, wtsPath=None, train=False, toSaveAs=None): 
         plt.show()
 
     return myModel
-
-myModel = model_wrapper('imgs/ranks2',13, None, train=True, toSaveAs='suitsOvernightWeights.h5')
-myModel2 = model_wrapper('imgs/suits2',4, None, train=True, toSaveAs='suitsOvernightWeights.h5')
+#
+# myModel = model_wrapper('imgs/ranks2',13, None, train=True, toSaveAs='ranksOvernightWeights.h5')
+# myModel2 = model_wrapper('imgs/ranks2',13, None, train=True, toSaveAs='ranksOvernightWeights2.h5')

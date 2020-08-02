@@ -18,7 +18,8 @@ cap.set(10, 150)
 
 flatten_card_set = []
 
-modelRanks, modelSuits = augtest.model_wrapper('imgs/ranks', 13, 'ranks3Weights.h5'), augtest.model_wrapper('imgs/suits', 4, 'suits2Weights.h5'),
+modelRanks, modelSuits = augtest.model_wrapper('imgs/ranks', 13, 'ranksOvernightWeights2.h5'),\
+                         augtest.model_wrapper('imgs/suits', 4, 'suitsOvernightWeights2.h5'),
 
 while True:
     success, img = cap.read()
