@@ -18,7 +18,7 @@ def model_predict(rankOrSuitModel, data, type):
 
     return d[np.argmax(pred, axis=0)]
 
-def model_wrapper(dataPath, classes, wtsPath=None, train=False):     # 'imgs/ranks'
+def model_wrapper(dataPath, classes, wtsPath=None, train=False, toSaveAs=None):     # 'imgs/ranks'
 
     X_train, X_test, y_train, y_test = model.loadData(dataPath)
 
@@ -61,7 +61,10 @@ def model_wrapper(dataPath, classes, wtsPath=None, train=False):     # 'imgs/ran
                         shuffle=1,
                         callbacks=[myCallback()])
 
-        myModel.save_weights('rankWeights.h5')
+        if wtsPath:
+            myModel.save_weights(wtsPath)
+        else:
+            myModel.save_weights(toSaveAs)
 
         import matplotlib.pyplot as plt
         plt.figure(1)
@@ -80,4 +83,4 @@ def model_wrapper(dataPath, classes, wtsPath=None, train=False):     # 'imgs/ran
 
     return myModel
 
-# myModel = model_wrapper('imgs/ranks',13, 'rankWeights.h5', train=True)
+# myModel = model_wrapper('imgs/suits2',4, 'suits2Weights.h5', train=True, toSaveAs='suits2Weights.h5')

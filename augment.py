@@ -15,7 +15,7 @@ def brightness_img(img, value):
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 def contrast(img, value):
-    brightness = 40
+    brightness = 30
     shadow = brightness
     highlight = 255
 

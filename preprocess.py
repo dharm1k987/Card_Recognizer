@@ -21,4 +21,17 @@ def preprocess_img(img):
     dial = cv2.dilate(canny, kernel=kernel, iterations=2)
     # result = cv2.erode(dial, kernel=kernel, iterations=1)
     result = dial
+
+
+
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    gray=cv2.bilateralFilter(gray,11,17,17)
+    edge=cv2.Canny(gray,30,200)
+    kernel = np.ones((3, 3))
+    dial = cv2.dilate(canny, kernel=kernel, iterations=2)
+    result = dial
+
+
+
+
     return result

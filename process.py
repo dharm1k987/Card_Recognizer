@@ -48,9 +48,9 @@ def findContours(img, original, draw=False):
                 # print(approx)
                 # print(finalOrder)
 
-                if area > maxArea:
-                    maxArea = area
-                    four_corners_set = []
+                # if area > maxArea:
+                #     maxArea = area
+                #     four_corners_set = []
 
                 four_corners_set.append(finalOrder)
                 for a in approx:
@@ -94,7 +94,7 @@ def get_corner_snip(flattened_images):
     for img in flattened_images:
         # img have shape (300, 200)
         # crop the image in half first, and then the width in half again
-        crop = img[10:120, 5:35]
+        crop = img[10:120, 0:35]
 
         # resize by a factor of 4
         crop = cv2.resize(crop, None, fx=4, fy=4)
@@ -106,9 +106,15 @@ def get_corner_snip(flattened_images):
         # threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters2")
         # threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters2")
 
+        gray=cv2.bilateralFilter(gray,11,17,17)
         canny = cv2.Canny(gray, 40, 24)
         kernel = np.ones((3, 3))
         result = cv2.dilate(canny, kernel=kernel, iterations=2)
+
+
+        # gray=cv2.bilateralFilter(gray,11,17,17)
+        # edge=cv2.Canny(gray,30,200)
+        # result = edge
 
         # result = gray
 
@@ -154,9 +160,24 @@ def split_rank_and_suit(cropped_images):
             x, y, w, h = cv2.boundingRect(approx)
             # cv2.rectangle(img, (0, y), (img.shape[0], y+h), (255, 0, 0), 2)
             crop = original[y:y+h][:]
-            sharpened = augment.contrast(crop, 100)
-            sharpened[sharpened < 100] = 0
-            sharpened[sharpened > 125] = 255
+            cv2.imwrite('{}-{}-before.png'.format(imgC, cntC), crop)
+
+            sharpened = augment.contrast(crop, 30)
+            cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
+
+            # sharpened[sharpened < 175] -= 150
+            # sharpened[sharpened < 0] = 0
+
+            for i in range(sharpened.shape[0]):
+                for j in range(sharpened.shape[1]):
+                    if sharpened[i,j] < 150:
+                        sharpened[i,j] = max(0, sharpened[i,j] - 60)
+                    if sharpened[i,j] > 150:
+                        sharpened[i,j] = 255
+
+
+
+            cv2.imwrite('{}-{}-sharp-after-filter.png'.format(imgC, cntC), sharpened)
 
             # cv2.imwrite('{}-{}-crop.png'.format(imgC, cntC), crop)
             # cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
@@ -187,7 +208,6 @@ def split_rank_and_suit(cropped_images):
 
 
 def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
-
     # 70x125
     # print(len(rank_suit_mapping))
     c = 0
@@ -197,38 +217,46 @@ def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
     for rank, suit in rank_suit_mapping:
         rank = cv2.resize(rank, (100, 120))
         suit = cv2.resize(suit, (100, 120))
-        cv2.imwrite('{}-0.png'.format(c), rank)
-        cv2.imwrite('{}-1.png'.format(c), suit)
+        # cv2.imwrite('{}-0.png'.format(c), rank)
+        # cv2.imwrite('{}-1.png'.format(c), suit)
         c += 1
 
         # compare against images
-        rankDict = dict()
-        for f in os.listdir('imgs/ranks'):
-            name = os.path.join('imgs/ranks', f)
-            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
-            diff = int(np.sum(cv2.absdiff(img, rank)/255))
-            # norm = cv2.norm(img, rank)
-            # diff = norm * norm / 255
-            rankName = Path(name).stem.split('-')[0]
-            if rankName in rankDict:
-                rankDict[rankName] += diff
-            else:
-                rankDict[rankName] = diff
+        # bestRank = ""
+        # minDiff = 100*120
+        # rankDict = dict()
+        # for f in os.listdir('imgs/ranks2'):
+        #     name = os.path.join('imgs/ranks2', f)
+        #     img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+        #     diff = int(np.sum(cv2.absdiff(img, rank)/255))
+        #
+        #     rankName = Path(name).stem.split('-')[0]
+        #     if rankName in rankDict:
+        #         rankDict[rankName] += diff
+        #     else:
+        #         rankDict[rankName] = diff
+        #
+        #     if diff < minDiff:
+        #         minDiff = diff
+        #         bestRank = Path(name).stem
 
-            # if diff < minDiff:
-            #     minDiff = diff
-            #     bestRank = Path(name).stem
-
-        suitDict = dict()
-        for f in os.listdir('imgs/suits'):
-            name = os.path.join('imgs/suits', f)
-            img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
-            diff = int(np.sum(cv2.absdiff(img, suit)/255))
-            suitName = Path(name).stem.split('-')[0]
-            if suitName in suitDict:
-                suitDict[suitName] += diff
-            else:
-                suitDict[suitName] = diff
+        # bestSuit = ""
+        # minDiff = 100*120
+        # suitDict = dict()
+        # for f in os.listdir('imgs/suits2'):
+        #     name = os.path.join('imgs/suits2', f)
+        #     img = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+        #     diff = int(np.sum(cv2.absdiff(img, suit)/255))
+        #
+        #     suitName = Path(name).stem.split('-')[0]
+        #     if suitName in suitDict:
+        #         suitDict[suitName] += diff
+        #     else:
+        #         suitDict[suitName] = diff
+        #
+        #     if diff < minDiff:
+        #         minDiff = diff
+        #         bestSuit = Path(name).stem
 
 
         bestSuit = augtest.model_predict(modelSuits, suit, 'suits')#min(suitDict, key=suitDict.get)
@@ -237,6 +265,7 @@ def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
 
 
         pred.append('{} of {}'.format(bestRank, bestSuit))
+        c+=1
 
     return pred
 #
