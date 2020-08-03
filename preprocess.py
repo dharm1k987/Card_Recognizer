@@ -15,7 +15,6 @@ def preprocess_img(img):
     # threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
     # threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
 
-    # canny = cv2.Canny(blur,42,89)
     canny = cv2.Canny(blur, 42, 89)
     kernel = np.ones((3, 3))
     dial = cv2.dilate(canny, kernel=kernel, iterations=2)

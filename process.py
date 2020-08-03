@@ -1,81 +1,71 @@
 import cv2
 import numpy as np
-import os
-from pathlib import Path
-from opencv_card_recognizer import augtest
 from opencv_card_recognizer import augment
+from opencv_card_recognizer import augtest
+from opencv_card_recognizer import constants
+
 
 def findContours(img, original, draw=False):
+    # find the set of contours on the threshed image
     contours, hier = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    # sort them by highest area
+    proper = sorted(contours, key=cv2.contourArea, reverse=True)
+
     four_corners_set = []
-
-    proper = sorted(contours, key = cv2.contourArea, reverse = True)
-
 
     for cnt in proper:
         area = cv2.contourArea(cnt)
         perimeter = cv2.arcLength(cnt, closed=True)
 
-        maxArea = 0
-
+        # only select those contours with a good area
         if area > 2000:
-            approx = cv2.approxPolyDP(cnt, 0.01*perimeter, closed=True)
-
+            # find out the number of corners
+            approx = cv2.approxPolyDP(cnt, 0.01 * perimeter, closed=True)
             numCorners = len(approx)
 
-            if draw and numCorners == 4:
-                # cv2.drawContours(original, cnt, -1, (255, 0, 0), 3)
-
+            if numCorners == 4:
                 # create bounding box around shape
                 x, y, w, h = cv2.boundingRect(approx)
-                cv2.rectangle(original, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-                # make sure the image is oriented right top left, bot left, bot right, top right
+                if draw:
+                    cv2.rectangle(original, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+                # make sure the image is oriented right: top left, bot left, bot right, top right
                 l1 = np.array(approx[0]).tolist()
                 l2 = np.array(approx[1]).tolist()
                 l3 = np.array(approx[2]).tolist()
                 l4 = np.array(approx[3]).tolist()
 
-                # find which ones have similar x values
-                similarX = []
-                sortedX = sorted([l1,l2,l3,l4], key=lambda x: x[0][0])
-                # sortedX[0] and sortedX[1] are the left half
-                # the one with the smaller y value goes first
-
                 finalOrder = []
+
+                # sort by X vlaue
+                sortedX = sorted([l1, l2, l3, l4], key=lambda x: x[0][0])
+
+                # sortedX[0] and sortedX[1] are the left half
                 finalOrder.extend(sorted(sortedX[0:2], key=lambda x: x[0][1]))
 
                 # now sortedX[1] and sortedX[2] are the right half
                 # the one with the larger y value goes first
                 finalOrder.extend(sorted(sortedX[2:4], key=lambda x: x[0][1], reverse=True))
-                # print(approx)
-                # print(finalOrder)
-
-                # if area > maxArea:
-                #     maxArea = area
-                #     four_corners_set = []
 
                 four_corners_set.append(finalOrder)
-                for a in approx:
-                    cv2.circle(original, (a[0][0], a[0][1]), 10, (255, 0, 0), 3)
-                    # print((a[0][0], a[0][1]))
-                # print("___________")
 
-                # return four_corners_set
-
-
+                if draw:
+                    for a in approx:
+                        cv2.circle(original, (a[0][0], a[0][1]), 10, (255, 0, 0), 3)
 
     return four_corners_set
 
+
 def flatten_card(img, set_of_corners):
-    width, height= 200, 300
+    width, height = 200, 300
     img_outputs = []
 
     for corner_set in set_of_corners:
-        # define 4 corners of the King of Spades card
+        # get the 4 corners of the card
         pts1 = np.float32(corner_set)
         # now define which corner we are referring to
-        pts2 = np.float32([[0,0],[0,height],[width,height],[width,0]])
+        pts2 = np.float32([[0, 0], [0, height], [width, height], [width, 0]])
 
         # transformation matrix
         matrix = cv2.getPerspectiveTransform(pts1, pts2)
@@ -85,145 +75,110 @@ def flatten_card(img, set_of_corners):
 
     return img_outputs
 
-# def empty(x):
-#     pass
-#
-# cv2.namedWindow("Parameters2")
-# cv2.resizeWindow("Parameters2",640,240)
-# cv2.createTrackbar("Threshold1","Parameters2",40,255,empty)
-# cv2.createTrackbar("Threshold2","Parameters2",24,255,empty)
-# originally 51 72
-# then 35 60
-
 def get_corner_snip(flattened_images):
-    c = 0
-    cropped_images = []
+    corner_images = []
+
     for img in flattened_images:
-        # img have shape (300, 200)
-        # crop the image in half first, and then the width in half again
-        crop = img[10:120, 0:35]
+
+        # crop the image to where the corner might be
+        crop = img[10:constants.CARD_HEIGHT, 0:35]
 
         # resize by a factor of 4
         crop = cv2.resize(crop, None, fx=4, fy=4)
 
         # threshold the corner
         gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        # blur = cv2.GaussianBlur(gray, (5, 5), 0)
-
-        # threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters2")
-        # threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters2")
-
-        gray=cv2.bilateralFilter(gray,11,17,17)
-        canny = cv2.Canny(gray, 40, 24)
+        bilateral = cv2.bilateralFilter(gray, 11, 17, 17)
+        canny = cv2.Canny(bilateral, 40, 24)
         kernel = np.ones((3, 3))
         result = cv2.dilate(canny, kernel=kernel, iterations=2)
 
+        # append the thresholded image and the original one
+        corner_images.append([result, gray])
 
-        # gray=cv2.bilateralFilter(gray,11,17,17)
-        # edge=cv2.Canny(gray,30,200)
-        # result = edge
+    return corner_images
 
-        # result = gray
-
-        # result = cv2.erode(dial, kernel=kernel, iterations=1)
-
-        # cv2.imshow('Image' + str(c) + '-before-warp.png', result)
-        # cv2.imwrite('Image' + str(c) + '-before-warp.png', img)
-        # cv2.imwrite('Image' + str(c) + '.png', result)
-        c += 1
-
-        cropped_images.append([result, gray])
-
-    return cropped_images
 
 def split_rank_and_suit(cropped_images):
+    # CAN MAKE THIS FUNCTION SIMPLER
+
     imgC = 0
     rank_suit_mapping = []
-    for img, original in cropped_images:
-        # print(img.shape)
 
-        # find the two largest contours
+    for img, original in cropped_images:
+
+        # find the contours (we want the rank and suit contours)
         contours, hier = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
+        # find the largest two contours
         highest_two = dict()
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 1500:
+            # if area < 2000, its not of relevance to us, so just fill it with black
+            if area < 2000:
                 cv2.fillPoly(img, pts=[cnt], color=0)
                 continue
             perimeter = cv2.arcLength(cnt, closed=True)
+            # append the contour and the perimeter
             highest_two[area] = [cnt, perimeter]
 
         # select the largest two in this image
         cntC = 0
         mapping = []
-        # if len(list(highest_two.keys())) != 2:
-        #     return []
-        # print(highest_two.keys())
+
+
         for area in sorted(highest_two)[0:2]:
             cnt = highest_two[area][0]
             perimeter = highest_two[area][1]
-            approx = cv2.approxPolyDP(cnt, 0.02*perimeter, closed=True)
+            approx = cv2.approxPolyDP(cnt, 0.02 * perimeter, closed=True)
             x, y, w, h = cv2.boundingRect(approx)
-            # cv2.rectangle(img, (0, y), (img.shape[0], y+h), (255, 0, 0), 2)
-            crop = original[y:y+h][:]
-            # cv2.imwrite('{}-{}-before.png'.format(imgC, cntC), crop)
+            crop = original[y:y + h][:]
 
             sharpened = augment.contrast(crop, 30)
-            # cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
-
-            # sharpened[sharpened < 175] -= 150
-            # sharpened[sharpened < 0] = 0
 
             for i in range(sharpened.shape[0]):
                 for j in range(sharpened.shape[1]):
-                    if sharpened[i,j] < 150:
-                        sharpened[i,j] = max(0, sharpened[i,j] - 60)
-                    if sharpened[i,j] > 150:
-                        sharpened[i,j] = 255
-
-
-
-            # cv2.imwrite('{}-{}-sharp-after-filter.png'.format(imgC, cntC), sharpened)
-
-            # cv2.imwrite('{}-{}-crop.png'.format(imgC, cntC), crop)
-            # cv2.imwrite('{}-{}-sharp.png'.format(imgC, cntC), sharpened)
+                    if sharpened[i, j] < 150:
+                        sharpened[i, j] = max(0, sharpened[i, j] - 60)
+                    if sharpened[i, j] > 150:
+                        sharpened[i, j] = 255
 
             cntC += 1
             mapping.append([sharpened, y])
 
         imgC += 1
 
-        # # lets store rank and then suit
+        # store rank and then suit
         mapping.sort(key=lambda x: x[1])
-        # print(mapping)
+
         for m in mapping:
             del m[1]
-        # print(mapping)
-        # print("-------------")
 
-        # [ mapping.pop(1) for m in mapping ]
         # # now we don't need the last item so we can remove
         if mapping and len(mapping) == 2:
             rank_suit_mapping.append([mapping[0][0], mapping[1][0]])
-            # print("added")
-            # cv2.imwrite('{}-0-split.png'.format(imgC), mapping[0][0])
-            # cv2.imwrite('{}-1-split.png'.format(imgC), mapping[1][0])
-
 
     return rank_suit_mapping
 
 
 def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
-    # 70x125
-    # print(len(rank_suit_mapping))
     c = 0
 
     pred = []
 
     for rank, suit in rank_suit_mapping:
-        rank = cv2.resize(rank, (100, 120))
-        suit = cv2.resize(suit, (100, 120))
+        # resize the rank and suit to our desired size
+        rank = cv2.resize(rank, (constants.CARD_WIDTH, constants.CARD_HEIGHT))
+        suit = cv2.resize(suit, (constants.CARD_WIDTH, constants.CARD_HEIGHT))
+
+        # remove any "spots"
+        for i in range(rank.shape[0]):
+            for j in range(rank.shape[1]):
+                if rank[i, j] < 230 and rank[i, j] > 50:
+                    rank[i, j] = 255
+                if suit[i, j] < 230 and suit[i, j] > 50:
+                    suit[i, j] = 255
+
         cv2.imwrite('{}-0.png'.format(c), rank)
         cv2.imwrite('{}-1.png'.format(c), suit)
         c += 1
@@ -265,42 +220,30 @@ def eval_rank_suite(rank_suit_mapping, modelRanks, modelSuits):
         #         minDiff = diff
         #         bestSuit = Path(name).stem
 
+        # get the predictions for suit and rank
+        bestSuitPredictions = augtest.model_predict(modelSuits, suit, 'suits')  # min(suitDict, key=suitDict.get)
+        bestRankPredictions = augtest.model_predict(modelRanks, rank, 'ranks')  # min(rankDict, key=rankDict.get)
 
+        # get the names and percentage of best and second best suits and ranks
+        bestSuitName, bestSuitPer = augtest.model_predictions_to_name(bestSuitPredictions)
+        bestRankName, bestRankPer = augtest.model_predictions_to_name(bestRankPredictions)
+        sbestSuitName, sbestSuitPer = augtest.model_predictions_to_name(bestSuitPredictions,loc=-2)
+        sbestRankName, sbestRankPer = augtest.model_predictions_to_name(bestRankPredictions, loc=-2)
 
-        bestSuitPredictions = augtest.model_predict(modelSuits, suit, 'suits')#min(suitDict, key=suitDict.get)
-        bestRankPredictions = augtest.model_predict(modelRanks, rank, 'ranks')#min(rankDict, key=rankDict.get)
-
-        bestSuitIndex = np.argsort(bestSuitPredictions, axis=0)
-        bestRankIndex = np.argsort(bestRankPredictions, axis=0)
-
-        rankNames = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-        suitNames = ['Hearts', 'Spades', 'Clubs', 'Diamonds']
-
-        bestSuitName, bestSuitPer = suitNames[bestSuitIndex[-1]], bestSuitPredictions[bestSuitIndex[-1]]
-        bestRankName, bestRankPer = rankNames[bestRankIndex[-1]], bestRankPredictions[bestRankIndex[-1]]
-
-        sbestSuitName, sbestSuitPer = suitNames[bestSuitIndex[-2]], bestSuitPredictions[bestSuitIndex[-2]]
-        sbestRankName, sbestRankPer = rankNames[bestRankIndex[-2]], bestRankPredictions[bestRankIndex[-2]]
-
+        # show both guesses
         totalPer = bestRankPer + sbestRankPer + bestSuitPer + sbestSuitPer
-
-        guess1 = '{}/{}/{}%'.format(bestRankName, bestSuitName, round(((bestSuitPer+bestRankPer)/totalPer)*100))
-        guess2 = '{}/{}/{}%'.format(sbestRankName, sbestSuitName, round(((sbestSuitPer+sbestRankPer)/totalPer)*100))
-
-
+        guess1 = '{}/{}/{}%'.format(bestRankName, bestSuitName, round(((bestSuitPer + bestRankPer) / totalPer) * 100))
+        guess2 = '{}/{}/{}%'.format(sbestRankName, sbestSuitName,
+                                    round(((sbestSuitPer + sbestRankPer) / totalPer) * 100))
 
         pred.append('{}\n{}'.format(guess1, guess2))
-        c+=1
+        c += 1
 
     return pred
-#
-# [[116, 168]]
-# [[102, 346]]
-# [[230, 349]]
-# [[237, 164]]
-def show_text(pred, four_corners_set, img):
 
+def show_text(pred, four_corners_set, img):
     for i in range(0, len(pred)):
+        # figure out where to place the text
         corners = np.array(four_corners_set[i])
         corners_flat = corners.reshape(-1, corners.shape[-1])
         startX = corners_flat[0][0] + 0
@@ -309,7 +252,8 @@ def show_text(pred, four_corners_set, img):
 
         font = cv2.FONT_HERSHEY_COMPLEX
         gap = 0
+        # show the text
         for j in pred_list:
-            cv2.putText(img, j, (startX, halfY+gap), font,0.8,(0,0,0),3,cv2.LINE_AA)
-            cv2.putText(img, j, (startX, halfY+gap), font,0.8,(50,200,200),2,cv2.LINE_AA)
+            cv2.putText(img, j, (startX, halfY + gap), font, 0.8, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(img, j, (startX, halfY + gap), font, 0.8, (50, 200, 200), 2, cv2.LINE_AA)
             gap += 30

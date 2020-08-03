@@ -4,36 +4,44 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from opencv_card_recognizer import augment
+from opencv_card_recognizer import constants
+
 
 def loadData(pathOfDir):
     images = []
     classes = []
+
     for filename in os.listdir(pathOfDir):
+        # get the full path
         f = os.path.join(pathOfDir, filename)
-        file_alone = filename.split('.')[0]
-        file_alone = file_alone.split('-')[0]
+
+        # the filename is something like Hearts-0.png or A-2.png
+        # to get the 'A' or 'Hearts', split on the '.' and then the '-'
+        file_alone = filename.split('.')[0].split('-')[0]
 
         img = cv2.imread(f)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+        # augment each one of the images
         list_of_imgs = [
             img,
             augment.brightness_img(img, 30),
             augment.brightness_img(img, -20),
             augment.noise_img(img),
             augment.zoom_img(img, 1.2),
-            # augment.horizontal_flip(img),
             augment.blur_image(img),
             augment.rotation(img, 10),
             augment.rotation(img, -10),
-            # augment.warpShift(img, 10)
         ]
 
-        c = 0
+        # c = 0
 
+        # loop through each augmented image
         for i in list_of_imgs:
+            # X
             images.append(i)
 
+            # y
             if file_alone == 'A':
                 classes.append(0)
             elif file_alone == 'J':
@@ -54,43 +62,38 @@ def loadData(pathOfDir):
                 classes.append(int(file_alone) - 1)
 
             # cv2.imwrite('{}-{}.png'.format(file_alone, c), i)
-            c += 1
+            # c += 1
 
     X = np.array(images)
     y = np.array(classes)
 
-    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.4, shuffle=True)
+    # split into train and test
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=constants.VALIDATION_SIZE, shuffle=True)
 
     return X_train, X_test, y_train, y_test
 
 
-def getModel(img, classes):
+def getModel(classes):
+    # declare the model with Conv and MaxPooling
     model = tf.keras.models.Sequential([
-        tf.keras.layers.InputLayer(input_shape=(120,100,1)),
+        tf.keras.layers.InputLayer(input_shape=(constants.CARD_HEIGHT, constants.CARD_WIDTH, 1)),
 
-        tf.keras.layers.Conv2D(64, (2,2), activation="relu", padding="same"),
-        # tf.keras.layers.Conv2D(64, (3,3), activation="relu", padding="same"),
-        tf.keras.layers.MaxPooling2D((2,2)),
+        tf.keras.layers.Conv2D(64, (2, 2), activation="relu", padding="same"),
+        tf.keras.layers.MaxPooling2D((2, 2)),
 
-        tf.keras.layers.Conv2D(128, (2,2), activation="relu", padding="same"),
-        # tf.keras.layers.Conv2D(128, (3,3), activation="relu", padding="same"),
-        tf.keras.layers.MaxPooling2D((2,2)),
+        tf.keras.layers.Conv2D(128, (2, 2), activation="relu", padding="same"),
+        tf.keras.layers.MaxPooling2D((2, 2)),
 
-        tf.keras.layers.Conv2D(256, (2,2), activation="relu", padding="same"),
-        # tf.keras.layers.Conv2D(256, (3,3), activation="relu", padding="same"),
-        tf.keras.layers.MaxPooling2D((2,2)),
+        tf.keras.layers.Conv2D(256, (2, 2), activation="relu", padding="same"),
+        tf.keras.layers.MaxPooling2D((2, 2)),
 
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(128, activation='relu'),
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dense(32, activation='relu'),
 
-        # tf.keras.layers.Dropout(0.2),
-
         tf.keras.layers.Dense(classes, activation='softmax')
-
     ])
 
-
-    model.compile('adam',loss='categorical_crossentropy',metrics=['accuracy'])
+    model.compile('adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
