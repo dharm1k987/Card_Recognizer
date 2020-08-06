@@ -34,8 +34,6 @@ def loadData(pathOfDir):
             augment.rotation(img, -10),
         ]
 
-        # c = 0
-
         # loop through each augmented image
         for i in list_of_imgs:
             # X
@@ -60,9 +58,6 @@ def loadData(pathOfDir):
                 classes.append(3)
             else:
                 classes.append(int(file_alone) - 1)
-
-            # cv2.imwrite('{}-{}.png'.format(file_alone, c), i)
-            # c += 1
 
     X = np.array(images)
     y = np.array(classes)

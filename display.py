@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 # https://www.murtazahassan.com/learn-opencv-in-3-hours-chapter-6/
 def stackImages(scale, imgArray):
     rows = len(imgArray)
