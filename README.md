@@ -6,7 +6,7 @@ Demonstration: [YouTube Video](https://www.youtube.com/watch?v=s2jYdsjWirs)
 
 <img src="screen.png"> 
 
-Tested using `Python 3.6`.
+Tested using `Python 3.6` (newer versions may or may not work)
 
 Relevant Packages:
 
