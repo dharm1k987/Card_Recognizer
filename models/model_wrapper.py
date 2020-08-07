@@ -4,8 +4,8 @@ import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils.np_utils import to_categorical
 from tensorflow.keras.callbacks import Callback
-from opencv_card_recognizer import model
-from opencv_card_recognizer import constants
+from models import model
+from helper import constants
 
 
 def model_predict(typeOfModel, data, type):

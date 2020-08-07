@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from opencv_card_recognizer import augment
-from opencv_card_recognizer import constants
+from current import augment
+from helper import constants
 
 
 def loadData(pathOfDir):

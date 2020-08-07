@@ -1,16 +1,16 @@
 import cv2
 import time
-from opencv_card_recognizer import preprocess
-from opencv_card_recognizer import display
-from opencv_card_recognizer import process
-from opencv_card_recognizer import model_wrapper
-from opencv_card_recognizer import constants
+from pre import preprocess
+from helper import display
+from current import process
+from models import model_wrapper
+from helper import constants
 
 frameWidth = 640
 frameHeight = 480
 
 # change to 1 if using USB webcam
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 frame_rate = 30
 
 # width is id number 3, height is id 4
@@ -23,8 +23,8 @@ cap.set(10, 150)
 flatten_card_set = []
 
 # get the model corresponding to ranks and suits
-modelRanks, modelSuits = model_wrapper.model_wrapper('imgs/ranks', constants.NUM_RANKS, 'rankWeights.h5'), \
-                         model_wrapper.model_wrapper('imgs/suits', constants.NUM_SUITS, 'suitWeights.h5'),
+modelRanks, modelSuits = model_wrapper.model_wrapper('imgs/ranks', constants.NUM_RANKS, 'weights/rankWeights.h5'), \
+                         model_wrapper.model_wrapper('imgs/suits', constants.NUM_SUITS, 'weights/suitWeights.h5'),
 
 prev = 0
 

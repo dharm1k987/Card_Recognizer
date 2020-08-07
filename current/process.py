@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
-from opencv_card_recognizer import augment
-from opencv_card_recognizer import model_wrapper
-from opencv_card_recognizer import constants
+from current import augment
+from models import model_wrapper
+from helper import constants
 
 
 def findContours(img, original, draw=False):
