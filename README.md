@@ -5,3 +5,19 @@ Card Recognizer is a program which can identify playing cards through the webcam
 Demonstration: [YouTube Video](https://www.youtube.com/watch?v=s2jYdsjWirs)
 
 <img src="screen.png"> 
+
+Tested using `Python 3.6`.
+
+Relevant Packages:
+
+- `opencv-python`: 4.3.0.36
+- `numpy`: 1.19.1
+- `tensorflow`: 2.2.0
+- `sklearn`: 0.0
+- `matplotlib`: 3.2.2
+- `keras`: 2.3.1
+- `scipy`: 1.5.0
+
+```bash
+python card.py
+```
